@@ -1,0 +1,81 @@
+import com.fazecast.jSerialComm.SerialPort;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
+public class SensorReader {
+
+    public static void main(String[] args) {
+        SerialPort[] ports = SerialPort.getCommPorts();
+
+      
+        System.out.println("Puertos disponibles:");
+        for (int i = 0; i < ports.length; i++) {
+            System.out.println(i + ": " + ports[i].getSystemPortName());
+        }
+
+     
+        System.out.print("Selecciona el número del puerto: ");
+        int index = new java.util.Scanner(System.in).nextInt();
+
+        if (index < 0 || index >= ports.length) {
+            System.out.println("Índice inválido.");
+            return;
+        }
+
+        SerialPort port = ports[index];
+        port.setBaudRate(115200);
+
+        if (!port.openPort()) {
+            System.out.println(" Error al abrir el puerto.");
+            return;
+        }
+
+        System.out.println(" Puerto abierto correctamente.");
+
+        try {
+            Thread.sleep(2000); // Dar tiempo a que el ESP32 reinicie
+
+            BufferedReader reader = new BufferedReader(
+                new InputStreamReader(port.getInputStream())
+            );
+
+            String pulso = "", aceleracion = "", giroscopio = "", temperatura = "";
+            String line;
+
+            
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+
+                if (line.startsWith("Pulso:")) {
+                    pulso = line;
+                } else if (line.startsWith("Aceleración")) {
+                    aceleracion = line;
+                } else if (line.startsWith("Giroscopio")) {
+                    giroscopio = line;
+                } else if (line.startsWith("Temperatura")) {
+                    temperatura = line;
+                } else if (line.contains("----------------------------")) {
+                    // Mostrar bloque completo
+                    System.out.println(" Bloque de datos recibido:");
+                    System.out.println(pulso);
+                    System.out.println(aceleracion);
+                    System.out.println(giroscopio);
+                    System.out.println(temperatura);
+                    System.out.println("----------------------------");
+
+                    // Reset para el siguiente bloque
+                    pulso = "";
+                    aceleracion = "";
+                    giroscopio = "";
+                    temperatura = "";
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            port.closePort();
+            System.out.println(" Puerto cerrado.");
+        }
+    }
+}
