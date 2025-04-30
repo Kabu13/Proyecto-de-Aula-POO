@@ -1,0 +1,77 @@
+
+
+
+#include <Wire.h>
+#include <MPU6050.h>
+
+#define LM35_PIN        34  // Sensor de temperatura
+#define PulseSensor_PIN 36  // Sensor de pulso
+
+MPU6050 mpu;
+
+int Signal; // Valor del sensor de pulso
+int UpperThreshold = 1930;
+int LowerThreshold = 1880;
+bool pulsoDetectado = false;
+
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+
+  analogReadResolution(12);  // Precisión de 0-4095 (12 bits)
+
+  // Inicializa MPU6050
+  Wire.begin();
+  mpu.initialize();
+
+  if (mpu.testConnection()) {
+    Serial.println("MPU6050 conectado correctamente");
+  } else {
+    Serial.println("Error en la conexión del MPU6050");
+  }
+}
+
+void loop() {
+  // ---------------- PULSO ----------------
+  Signal = analogRead(PulseSensor_PIN);
+  Serial.print("Pulso: ");
+  Serial.println(Signal);
+
+  // Detecta un pulso
+  if (Signal > UpperThreshold && !pulsoDetectado) {
+    pulsoDetectado = true;
+    Serial.println("¡Pulso detectado!");
+  }
+
+  if (Signal < LowerThreshold && pulsoDetectado) {
+    pulsoDetectado = false;
+  }
+
+  // ---------------- MPU6050 ----------------
+  int16_t ax, ay, az;
+  int16_t gx, gy, gz;
+
+  mpu.getAcceleration(&ax, &ay, &az);
+  mpu.getRotation(&gx, &gy, &gz);
+
+  Serial.print("Aceleración -> X: "); Serial.print(ax);
+  Serial.print(" Y: "); Serial.print(ay);
+  Serial.print(" Z: "); Serial.println(az);
+
+  Serial.print("Giroscopio -> X: "); Serial.print(gx);
+  Serial.print(" Y: "); Serial.print(gy);
+  Serial.print(" Z: "); Serial.println(gz);
+
+  // ---------------- LM35 ----------------
+  int sensorValue = analogRead(LM35_PIN);
+  float voltage = sensorValue * (3.3 / 4095.0);
+  float temperatureLM35 = (voltage * 100.0) + 13;
+
+  Serial.print("Temperatura LM35: ");
+  Serial.print(temperatureLM35);
+  Serial.println(" °C");
+
+  Serial.println("----------------------------");
+
+  delay(20);  // Delay general (ajustable)
+}
